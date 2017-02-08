@@ -9,10 +9,6 @@ import (
 type StoreAction int
 
 var (
-	BlobAdd    = StoreAction(1)
-	BlobRemove = StoreAction(2)
-	BlobUpdate = StoreAction(3)
-
 	BlobNotFoundError = errors.New("File not found")
 )
 

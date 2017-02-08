@@ -5,6 +5,7 @@ import "io"
 type Metadata struct {
 	Tag         string
 	ContentType string
+	Name        string
 }
 
 type Blob interface {
