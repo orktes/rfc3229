@@ -95,7 +95,7 @@ func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
 		if md5Str != meta.MD5 {
 			for _, listener := range fs.listeners {
 				var blob blob.Blob
-				blob, err = fs.getFile(path.Join(fs.path, ".data", filePath), meta)
+				blob, err = fs.getFile(fs.getDataPath(filePath), meta)
 				if err != nil {
 					return err
 				}
@@ -164,7 +164,7 @@ func (fs *FSBlobStore) moveAndMD5(fpath string) (string, error) {
 
 	hash := md5.New()
 
-	fullPath := path.Join(fs.path, ".data", fpath)
+	fullPath := fs.getDataPath(fpath)
 	if err = os.MkdirAll(path.Dir(fullPath), 0766); err != nil {
 		return "", err
 	}
@@ -213,7 +213,12 @@ func (fs *FSBlobStore) startWatching() error {
 }
 
 func (fs *FSBlobStore) getMetaPath(fpath string) string {
-	return path.Join(fs.path, ".data", fpath+".meta")
+	return fs.getDataPath(fpath) + ".meta"
+}
+
+func (fs *FSBlobStore) getDataPath(fpath string) string {
+	// TODO make this configurable
+	return path.Join(".data", fpath)
 }
 
 func (fs *FSBlobStore) getMeta(fpath string) (mt fsMeta, err error) {
@@ -259,7 +264,7 @@ func (fs *FSBlobStore) getFile(p string, fsm fsMeta) (blob.Blob, error) {
 }
 
 func (fs *FSBlobStore) Get(fpath string) (blob.Blob, error) {
-	p := path.Join(fs.path, ".data", fpath)
+	p := fs.getDataPath(fpath)
 	mt, err := fs.getMeta(fpath)
 	if err != nil {
 		return nil, err
