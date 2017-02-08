@@ -249,7 +249,7 @@ func (fs *FSBlobStore) writeMeta(fpath string, mt fsMeta, create bool) (err erro
 func (fs *FSBlobStore) getFile(p string, fsm fsMeta) (blob.Blob, error) {
 	file, err := os.Open(p)
 	if err != nil {
-		if err == os.ErrNotExist {
+		if os.IsNotExist(os.ErrNotExist) {
 			return nil, BlobNotFoundError
 		}
 		return nil, err
@@ -258,6 +258,7 @@ func (fs *FSBlobStore) getFile(p string, fsm fsMeta) (blob.Blob, error) {
 	metadata := blob.Metadata{
 		Tag:         fsm.MD5,
 		ContentType: mime.TypeByExtension(filepath.Ext(p)),
+		Name:        p,
 	}
 
 	return &FSBlobStoreBlob{file, metadata}, nil
