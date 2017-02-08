@@ -26,6 +26,10 @@ type Handler struct {
 	deltaStore deltastore.DeltaStore
 }
 
+func NewHandler(blobStore blobstore.BlobStore, deltaStore deltastore.DeltaStore) *Handler {
+	return &Handler{blobStore, deltaStore}
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upath := r.URL.Path
 	if !strings.HasPrefix(upath, "/") {
@@ -49,6 +53,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the request has all of the required things for a
 	if im, ok := checkIM(w, r); ok {
+		if im.Etag == md.Tag {
+			if err = sendNotModified(w, r, md); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+
 		var ds deltastore.Delta
 		ds, err = h.getDelta(upath, im, md)
 		if err != nil {
@@ -80,12 +92,18 @@ func (h *Handler) getDelta(path string, im imInfo, md blob.Metadata) (deltastore
 	return nil, NoMatchingManipulators
 }
 
+func sendNotModified(w http.ResponseWriter, r *http.Request, m blob.Metadata) error {
+	w.Header().Set("Etag", m.Tag)
+	w.WriteHeader(http.StatusNotModified)
+	return nil
+}
+
 func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m blob.Metadata) error {
 	w.Header().Set("IM", ds.Algorithm())
 	w.Header().Set("Delta-Base", ds.Base())
 	w.Header().Set("Etag", m.Tag)
 
-	w.WriteHeader(226)
+	w.WriteHeader(http.StatusIMUsed)
 
 	if r.Method != "HEAD" {
 		deltaReader, err := ds.Data()
