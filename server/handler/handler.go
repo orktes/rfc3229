@@ -120,6 +120,7 @@ func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m bl
 
 func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metadata) error {
 	w.Header().Set("Content-Type", m.ContentType)
+	w.Header().Set("Etag", m.Tag)
 
 	if r.Method != "HEAD" {
 		reader, err := b.Data()
