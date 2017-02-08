@@ -5,12 +5,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"log"
 	"mime"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	fsnotify "gopkg.in/fsnotify.v0"
 
 	"github.com/orktes/rfc3229/server/blob"
 )
@@ -40,16 +43,19 @@ type FSBlobStore struct {
 
 func NewFSBlobStore(path string) (*FSBlobStore, error) {
 	fsbs := &FSBlobStore{path: path}
-
-	if err := fsbs.startWatching(); err != nil {
-		return nil, err
-	}
-
-	if err := fsbs.scanFiles(); err != nil {
-		return nil, err
-	}
-
 	return fsbs, nil
+}
+
+func (fs *FSBlobStore) Init() error {
+	if err := fs.startWatching(); err != nil {
+		return err
+	}
+
+	if err := fs.scanFiles(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
@@ -179,7 +185,31 @@ func (fs *FSBlobStore) moveAndMD5(fpath string) (string, error) {
 }
 
 func (fs *FSBlobStore) startWatching() error {
-	return nil
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	// Process events
+	go func() {
+		for {
+			select {
+			case ev := <-watcher.Event:
+				if ev.IsModify() || ev.IsCreate() {
+					// TODO more erros processing
+					if file, err := os.Open(ev.Name); err == nil {
+						if fileInfo, err := file.Stat(); err == nil {
+							fs.handleFile(ev.Name, fileInfo)
+						}
+					}
+				}
+			case err := <-watcher.Error:
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	return watcher.Watch(fs.path)
 }
 
 func (fs *FSBlobStore) getMetaPath(fpath string) string {

@@ -31,7 +31,7 @@ func (d *InMemoryDeltaStoreDelta) Algorithm() string {
 	return "bsdiff"
 }
 func (d *InMemoryDeltaStoreDelta) Base() string {
-	return d.Base()
+	return d.base
 }
 func (d *InMemoryDeltaStoreDelta) Data() (io.ReadCloser, error) {
 	return nopCloser{bytes.NewReader(d.data)}, nil
@@ -42,11 +42,15 @@ type InMemoryDeltaStore struct {
 	deltas map[string]inmemDelta
 }
 
+func NewInMemoryDeltaStore() *InMemoryDeltaStore {
+	return &InMemoryDeltaStore{deltas: map[string]inmemDelta{}}
+}
+
 func (imds *InMemoryDeltaStore) SupportsManipulator(manipulator string) bool {
 	return manipulator == "bsdiff"
 }
 
-func (imds *InMemoryDeltaStore) GetDelta(manipulator string, path string, deltaBaseTag string, newFileTag string) (Delta, error) {
+func (imds *InMemoryDeltaStore) GetDelta(manipulator string, deltaBaseTag string, newFileTag string) (Delta, error) {
 	if !imds.SupportsManipulator(manipulator) {
 		return nil, errors.New("Manipulator not supported")
 	}
@@ -72,16 +76,18 @@ func (imds *InMemoryDeltaStore) GetDelta(manipulator string, path string, deltaB
 	}, nil
 }
 
-func (imds *InMemoryDeltaStore) CreateDelta(path string, deltaBase blob.Blob, newFile blob.Blob) (Delta, error) {
+func (imds *InMemoryDeltaStore) CreateDelta(deltaBase blob.Blob, newFile blob.Blob) (Delta, error) {
 	baseReader, err := deltaBase.Data()
 	if err != nil {
 		return nil, err
 	}
+	defer baseReader.Close()
 
 	newFileReader, err := newFile.Data()
 	if err != nil {
 		return nil, err
 	}
+	defer baseReader.Close()
 
 	var b bytes.Buffer
 	patchWriter := bufio.NewWriter(&b)

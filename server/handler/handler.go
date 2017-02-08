@@ -62,7 +62,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var ds deltastore.Delta
-		ds, err = h.getDelta(upath, im, md)
+		ds, err = h.getDelta(im, md)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -81,11 +81,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getDelta(path string, im imInfo, md blob.Metadata) (deltastore.Delta, error) {
+func (h *Handler) getDelta(im imInfo, md blob.Metadata) (deltastore.Delta, error) {
 	manipulators := strings.Split(im.AIM, ",")
 	for _, manipulator := range manipulators {
 		if h.deltaStore.SupportsManipulator(strings.TrimSpace(manipulator)) {
-			return h.deltaStore.GetDelta(manipulator, path, im.Etag, md.Tag)
+			return h.deltaStore.GetDelta(manipulator, im.Etag, md.Tag)
 		}
 	}
 
