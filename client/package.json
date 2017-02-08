@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "devDependencies": {
+    "webpack": "^2.2.1"
+  },
+  "dependencies": {
+    "bspatch": "0.0.1"
+  }
+}

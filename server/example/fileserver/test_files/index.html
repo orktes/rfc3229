@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/worker.js', {scope: '/'})
+  .then(function(reg) {
+    // registration worked
+    console.log('Registration succeeded. Scope is ' + reg.scope);
+  }).catch(function(error) {
+    // registration failed
+    console.log('Registration failed with ' + error);
+  });
+}
+    </script>
+</head>
+<body>
+  <div id=box></div>
+  <script>
+async function f () {
+  const response = await fetch('/foobar');
+  const text = await response.text();
+  box.innerHTML = text;
+}
+
+f();
+box.onclick = f;
+  </script>
+</body>
+</html>
