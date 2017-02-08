@@ -73,11 +73,11 @@ func (imds *InMemoryDeltaStore) GetDelta(manipulator string, deltaBaseTag string
 		}
 	}
 
-	header := make([]byte, 4+len(points)*4)
+	header := make([]byte, 8+len(points)*8)
 	binary.LittleEndian.PutUint64(header, uint64(len(points)))
 
 	for i, offset := range points {
-		binary.LittleEndian.PutUint64(header[4+(i*4):], uint64(offset+len(header)))
+		binary.LittleEndian.PutUint64(header[8+(i*8):], uint64(offset+len(header)))
 	}
 
 	return &InMemoryDeltaStoreDelta{
