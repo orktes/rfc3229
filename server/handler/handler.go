@@ -155,7 +155,7 @@ func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metada
 }
 
 func checkIM(w http.ResponseWriter, r *http.Request) (imInfo, bool) {
-	etag := r.Header.Get("Etag")
+	etag := r.Header.Get("If-None-Match")
 	aim := r.Header.Get("A-IM")
 
 	return imInfo{
