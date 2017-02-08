@@ -2,8 +2,11 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/http/httputil"
 	"path"
 	"strings"
 
@@ -31,6 +34,20 @@ func NewHandler(blobStore blobstore.BlobStore, deltaStore deltastore.DeltaStore)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Debug logging
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("%q\n", dump)
+
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	upath := r.URL.Path
 	if !strings.HasPrefix(upath, "/") {
 		upath = "/" + upath
@@ -105,7 +122,7 @@ func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m bl
 
 	w.WriteHeader(http.StatusIMUsed)
 
-	if r.Method != "HEAD" {
+	if r.Method != http.MethodHead {
 		deltaReader, err := ds.Data()
 		if err != nil {
 			return err
@@ -122,7 +139,7 @@ func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metada
 	w.Header().Set("Content-Type", m.ContentType)
 	w.Header().Set("Etag", m.Tag)
 
-	if r.Method != "HEAD" {
+	if r.Method != http.MethodHead {
 		reader, err := b.Data()
 		if err != nil {
 			return err
