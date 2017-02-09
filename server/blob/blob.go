@@ -9,6 +9,7 @@ type Metadata struct {
 }
 
 type Blob interface {
-	Data() (io.ReadCloser, error)
+	Data() (io.Reader, error)
 	Metadata() (Metadata, error)
+	Close() error
 }

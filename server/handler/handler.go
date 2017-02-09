@@ -49,6 +49,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	defer b.Close()
 
 	md, err := b.Metadata()
 	if err != nil {
@@ -132,7 +133,6 @@ func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metada
 		if err != nil {
 			return err
 		}
-		defer reader.Close()
 
 		// TODO implement range support if reader supports it
 

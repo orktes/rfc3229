@@ -91,18 +91,13 @@ func (imds *InMemoryDeltaStore) CreateDelta(deltaBase blob.Blob, newFile blob.Bl
 	if err != nil {
 		return nil, err
 	}
-	defer baseReader.Close()
+	defer deltaBase.Close()
 
 	newFileReader, err := newFile.Data()
 	if err != nil {
 		return nil, err
 	}
-	defer baseReader.Close()
-
-	var b bytes.Buffer
-	patchWriter := bufio.NewWriter(&b)
-	binarydist.Diff(baseReader, newFileReader, patchWriter)
-	patchWriter.Flush()
+	defer newFile.Close()
 
 	baseMetadata, err := deltaBase.Metadata()
 	if err != nil {
@@ -113,6 +108,22 @@ func (imds *InMemoryDeltaStore) CreateDelta(deltaBase blob.Blob, newFile blob.Bl
 	if err != nil {
 		return nil, err
 	}
+
+	imds.Lock()
+	if deltaStruct, ok := imds.deltas[baseMetadata.Tag]; ok {
+		if deltaStruct.tag == newMetadata.Tag {
+			return &InMemoryDeltaStoreDelta{
+				data: deltaStruct.delta,
+				base: baseMetadata.Tag,
+			}, nil
+		}
+	}
+	imds.Unlock()
+
+	var b bytes.Buffer
+	patchWriter := bufio.NewWriter(&b)
+	binarydist.Diff(baseReader, newFileReader, patchWriter)
+	patchWriter.Flush()
 
 	imds.Lock()
 	defer imds.Unlock()

@@ -30,12 +30,16 @@ type FSBlobStoreBlob struct {
 	metadata blob.Metadata
 }
 
-func (fsb *FSBlobStoreBlob) Data() (io.ReadCloser, error) {
+func (fsb *FSBlobStoreBlob) Data() (io.Reader, error) {
 	return fsb.file, nil
 }
 
 func (fsb *FSBlobStoreBlob) Metadata() (blob.Metadata, error) {
 	return fsb.metadata, nil
+}
+
+func (fsb *FSBlobStoreBlob) Close() error {
+	return fsb.file.Close()
 }
 
 type FSBlobStore struct {
