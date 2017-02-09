@@ -21,7 +21,7 @@ if ('serviceWorker' in navigator) {
 async function f () {
   const response = await fetch('/foobar');
   const text = await response.text();
-  box.innerHTML = response;
+  box.innerHTML = text;
 }
 
 f();
