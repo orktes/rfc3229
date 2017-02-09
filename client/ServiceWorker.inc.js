@@ -1,6 +1,5 @@
 'use strict';
 
-require('../../../../Applifier/social-manifest-server/clients/js/build/client');
 
 async function applyPatch (request, response) {
   if (!response || !response.headers.has('etag')) { return [true, await fetch(request)]; }
@@ -8,8 +7,15 @@ async function applyPatch (request, response) {
   headers.set('if-none-match', response.headers.get('etag'));
   headers.set('a-im', 'bsdiff');
   const patchResponse = await fetch(request.url, { headers });
-  if (patchResponse.status !== 226 || !patchResponse.headers.has('im') || patchResponse.headers.get('im') !== 'bsdiff') { return [false, await fetch(request)]; }
-  console.log('helveti')
+  if (
+    patchResponse.status !== 226 ||
+    !patchResponse.headers.has('im') ||
+    patchResponse.headers.get('im') !== 'bsdiff') {
+      if (patchResponse.status === 304) {
+        return [false, response];
+      }
+      return [false, await fetch(request)];
+  }
   const [{ value: old }, { value: patch }] = await Promise.all([response.body.getReader().read(), patchResponse.body.getReader().read()]);
   const newFile = BSDiff.Patch(old, patch);
   return [true, new Response(newFile[0], {
