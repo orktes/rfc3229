@@ -3,7 +3,7 @@
 
 async function applyPatch (request, cachedResponse) {
   const headers = new Headers(request.headers);
-  if (cachedResponse.headers.has('etag')) {
+  if (cachedResponse && cachedResponse.headers.has('etag')) {
     headers.set('if-none-match', cachedResponse.headers.get('etag'));
   }
 
