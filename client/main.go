@@ -7,6 +7,7 @@ import (
 
 func main() {
 	js.Global.Set("BSDiff", map[string]interface{}{
-		"Patch": patch.PatchSlice,
+		"Patch":      patch.PatchSlice,
+		"MultiPatch": patch.MultiPatchSlice,
 	})
 }

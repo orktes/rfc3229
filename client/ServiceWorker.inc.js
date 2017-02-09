@@ -18,7 +18,7 @@ async function applyPatch (request, cachedResponse) {
     cachedResponse.body.getReader().read(),
     serverResponse.body.getReader().read()
   ]);
-  const newFile = BSDiff.Patch(old, patch);
+  const newFile = BSDiff.MultiPatch(old, patch);
   return new Response(newFile[0], {
     headers: new Headers(serverResponse.headers),
   });

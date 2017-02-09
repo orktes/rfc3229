@@ -2,6 +2,7 @@ package patch
 
 import (
 	"bytes"
+	"encoding/binary"
 	"strings"
 	"testing"
 
@@ -53,6 +54,30 @@ func TestPatchSlice(t *testing.T) {
 
 	if string(out) != example2 {
 		t.Errorf("Failed %d %+v %d", len(out), out, len(example2))
+	}
+}
+
+func TestMultiPatchSlice(t *testing.T) {
+	example1Reader := strings.NewReader(example1)
+	example2Reader := strings.NewReader(example2)
+
+	var b bytes.Buffer
+	err := binarydist.Diff(example1Reader, example2Reader, &b)
+	if err != nil {
+		t.Error(err)
+	}
+
+	header := make([]byte, 16)
+	binary.LittleEndian.PutUint64(header, uint64(1))
+	binary.LittleEndian.PutUint64(header[8:], uint64(16))
+
+	out, _ := MultiPatchSlice(
+		[]byte(example1),
+		append(header, b.Bytes()...),
+	)
+
+	if string(out) != example2 {
+		t.Errorf("Failed %d %v %d", len(out), out, len(example2))
 	}
 }
 

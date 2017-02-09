@@ -3,6 +3,7 @@ package patch
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/kr/binarydist"
@@ -14,10 +15,11 @@ func Patch(in, patch io.Reader, out io.Writer) error {
 
 func MultiPatchSlice(in, patchSlice []byte) ([]byte, error) {
 	var err error
-	headerPatchCount := binary.LittleEndian.Uint64(in)
+	headerPatchCount := binary.LittleEndian.Uint64(patchSlice)
 	for i := uint64(0); i < headerPatchCount; i++ {
 		lengthOffset := 8 * (1 + i)
-		patchIndex := binary.LittleEndian.Uint64(in[lengthOffset:])
+		patchIndex := binary.LittleEndian.Uint64(patchSlice[lengthOffset:])
+		fmt.Printf("Start %d\n", patchIndex)
 		in, err = PatchSlice(in, patchSlice[patchIndex:])
 	}
 
