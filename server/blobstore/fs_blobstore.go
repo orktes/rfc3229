@@ -14,8 +14,7 @@ import (
 	"time"
 
 	"github.com/orktes/rfc3229/server/util"
-
-	fsnotify "gopkg.in/fsnotify.v0"
+	"github.com/rjeczalik/notify"
 
 	"github.com/orktes/rfc3229/server/blob"
 )
@@ -193,36 +192,35 @@ func (fs *FSBlobStore) moveAndMD5(fpath string) (string, error) {
 }
 
 func (fs *FSBlobStore) startWatching() error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
+	c := make(chan notify.EventInfo, 1)
 
 	// Process events
 	go func() {
 		throttler := util.NewThrottler(time.Second)
 		for {
 			select {
-			case ev := <-watcher.Event:
-				if ev.IsModify() || ev.IsCreate() {
-					// TODO more erros processing
-					if file, err := os.Open(ev.Name); err == nil {
-						defer file.Close()
-						if fileInfo, err := file.Stat(); err == nil {
-							// TODO throttle based on ev.Name
-							throttler.Run(ev.Name, func() {
-								fs.handleFile(ev.Name, fileInfo)
-							})
-						}
+			case ev := <-c:
+				wd, _ := os.Getwd()
+				fpath, err := filepath.Rel(wd, ev.Path())
+				if err != nil {
+					log.Println("error: " + err.Error())
+				}
+				// TODO more erros processing
+				if file, err := os.Open(fpath); err == nil {
+					defer file.Close()
+					if fileInfo, err := file.Stat(); err == nil {
+						// TODO throttle based on ev.Name
+						throttler.Run(fpath, func() {
+							fs.handleFile(fpath, fileInfo)
+						})
 					}
 				}
-			case err := <-watcher.Error:
-				log.Println("error:", err)
+
 			}
 		}
 	}()
 
-	return watcher.Watch(fs.path)
+	return notify.Watch(path.Join(fs.path, "/..."), c, notify.Create, notify.Write)
 }
 
 func (fs *FSBlobStore) getMetaPath(fpath string) string {

@@ -32,13 +32,19 @@ func (dpb *DeltaPatchBridge) Add(blob.Blob) {
 }
 
 func (dpb *DeltaPatchBridge) Update(oldBlob blob.Blob, newBlob blob.Blob) {
+	defer oldBlob.Close()
+	defer newBlob.Close()
+
+	newMeta, _ := newBlob.Metadata()
+	oldMeta, _ := oldBlob.Metadata()
+
+	log.Printf("Creating delta for file %s > %s\n", oldMeta.Tag, newMeta.Tag)
+
 	delta, err := dpb.deltaStore.CreateDelta(oldBlob, newBlob)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-
-	newMeta, _ := newBlob.Metadata()
 
 	log.Printf("Created delta for file %s > %s with manipulator %s\n", delta.Base(), newMeta.Tag, delta.Algorithm())
 }
