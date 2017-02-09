@@ -3,6 +3,7 @@ package deltastore
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"io"
 	"sync"
@@ -57,10 +58,12 @@ func (imds *InMemoryDeltaStore) GetDelta(manipulator string, deltaBaseTag string
 
 	tag := deltaBaseTag
 	var deltaBuffer bytes.Buffer
+	var points []int
 
 	for {
 		if deltaStruct, ok := imds.deltas[tag]; ok {
 			tag = deltaStruct.tag
+			points = append(points, deltaBuffer.Len())
 			deltaBuffer.Write(deltaStruct.delta)
 			if tag == newFileTag {
 				break
@@ -70,8 +73,15 @@ func (imds *InMemoryDeltaStore) GetDelta(manipulator string, deltaBaseTag string
 		}
 	}
 
+	header := make([]byte, 8+len(points)*8)
+	binary.LittleEndian.PutUint64(header, uint64(len(points)))
+
+	for i, offset := range points {
+		binary.LittleEndian.PutUint64(header[8+(i*8):], uint64(offset+len(header)))
+	}
+
 	return &InMemoryDeltaStoreDelta{
-		data: deltaBuffer.Bytes(),
+		data: append(header, deltaBuffer.Bytes()...),
 		base: deltaBaseTag,
 	}, nil
 }
