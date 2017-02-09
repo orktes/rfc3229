@@ -14,8 +14,6 @@ async function applyPatch (request, cachedResponse) {
     return serverResponse.status === 200 ? serverResponse : cachedResponse;
   }
 
-  console.log('Going to try to patch');
-
   const [{ value: old }, { value: patch }] = await Promise.all([
     cachedResponse.body.getReader().read(),
     serverResponse.body.getReader().read()
@@ -24,7 +22,7 @@ async function applyPatch (request, cachedResponse) {
   const newFile = BSDiff.MultiPatch(old, patch);
   const responseHeaders = new Headers(serverResponse.headers);
   responseHeaders.set('content-type', cachedResponse && cachedResponse.headers.get('content-type'));
-  responseHeaders.set('content-length', newFile[0].length);
+  responseHeaders.delete('content-length');
   return new Response(newFile[0], {
     headers: responseHeaders,
   });
@@ -36,7 +34,14 @@ async function findAndPatch (request) {
   }
 
   const cachedResponse = await caches.match(request);
-  const response = await applyPatch(request, cachedResponse);
+
+  let response;
+  if (!cachedResponse) {
+    response = await fetch(request);
+  } else {
+    response = await applyPatch(request, cachedResponse);
+  }
+
   const cache = await caches.open('v1');
   cache.put(request, response.clone());
   return response;
