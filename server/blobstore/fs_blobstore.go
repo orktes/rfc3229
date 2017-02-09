@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/orktes/rfc3229/server/util"
+
 	fsnotify "gopkg.in/fsnotify.v0"
 
 	"github.com/orktes/rfc3229/server/blob"
@@ -83,10 +85,12 @@ func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
 						listener.Add(blob)
 					}
 				}
+				return nil
 			}
 			return err
 		}
 
+		// Wrong md5 <-
 		md5Str, err := fs.getMD5ForFile(path.Join(fs.path, filePath))
 		if err != nil {
 			return err
@@ -192,14 +196,19 @@ func (fs *FSBlobStore) startWatching() error {
 
 	// Process events
 	go func() {
+		throttler := util.NewThrottler(time.Second)
 		for {
 			select {
 			case ev := <-watcher.Event:
 				if ev.IsModify() || ev.IsCreate() {
 					// TODO more erros processing
 					if file, err := os.Open(ev.Name); err == nil {
+						defer file.Close()
 						if fileInfo, err := file.Stat(); err == nil {
-							fs.handleFile(ev.Name, fileInfo)
+							// TODO throttle based on ev.Name
+							throttler.Run(ev.Name, func() {
+								fs.handleFile(ev.Name, fileInfo)
+							})
 						}
 					}
 				}
