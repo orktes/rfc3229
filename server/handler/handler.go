@@ -2,11 +2,8 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"net/http/httputil"
 	"path"
 	"strings"
 
@@ -34,15 +31,6 @@ func NewHandler(blobStore blobstore.BlobStore, deltaStore deltastore.DeltaStore)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Debug logging
-	dump, err := httputil.DumpRequest(r, true)
-	if err != nil {
-		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("%q\n", dump)
-
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
