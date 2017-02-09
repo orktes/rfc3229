@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"io"
+	"log"
+	"os"
 	"sync"
 
 	"github.com/kr/binarydist"
@@ -13,8 +16,8 @@ import (
 )
 
 type inmemDelta struct {
-	tag   string
-	delta []byte
+	Tag   string
+	Delta []byte
 }
 
 type nopCloser struct {
@@ -44,7 +47,14 @@ type InMemoryDeltaStore struct {
 }
 
 func NewInMemoryDeltaStore() *InMemoryDeltaStore {
-	return &InMemoryDeltaStore{deltas: map[string]inmemDelta{}}
+	store := &InMemoryDeltaStore{deltas: map[string]inmemDelta{}}
+	store.load()
+	log.Printf("Loaded %d deltas from filesystem", len(store.deltas))
+	for key, d := range store.deltas {
+		log.Printf("Delta between %s > %s", key, d.Tag)
+	}
+
+	return store
 }
 
 func (imds *InMemoryDeltaStore) SupportsManipulator(manipulator string) bool {
@@ -62,9 +72,9 @@ func (imds *InMemoryDeltaStore) GetDelta(manipulator string, deltaBaseTag string
 
 	for {
 		if deltaStruct, ok := imds.deltas[tag]; ok {
-			tag = deltaStruct.tag
+			tag = deltaStruct.Tag
 			points = append(points, deltaBuffer.Len())
-			deltaBuffer.Write(deltaStruct.delta)
+			deltaBuffer.Write(deltaStruct.Delta)
 			if tag == newFileTag {
 				break
 			}
@@ -110,15 +120,14 @@ func (imds *InMemoryDeltaStore) CreateDelta(deltaBase blob.Blob, newFile blob.Bl
 	}
 
 	imds.Lock()
-	if deltaStruct, ok := imds.deltas[baseMetadata.Tag]; ok {
-		if deltaStruct.tag == newMetadata.Tag {
-			return &InMemoryDeltaStoreDelta{
-				data: deltaStruct.delta,
-				base: baseMetadata.Tag,
-			}, nil
-		}
-	}
+	deltaStruct := imds.deltas[baseMetadata.Tag]
 	imds.Unlock()
+	if deltaStruct.Tag == newMetadata.Tag {
+		return &InMemoryDeltaStoreDelta{
+			data: deltaStruct.Delta,
+			base: baseMetadata.Tag,
+		}, nil
+	}
 
 	var b bytes.Buffer
 	patchWriter := bufio.NewWriter(&b)
@@ -131,12 +140,40 @@ func (imds *InMemoryDeltaStore) CreateDelta(deltaBase blob.Blob, newFile blob.Bl
 	delta := b.Bytes()
 
 	imds.deltas[baseMetadata.Tag] = inmemDelta{
-		tag:   newMetadata.Tag,
-		delta: delta,
+		Tag:   newMetadata.Tag,
+		Delta: delta,
+	}
+
+	if err := imds.persist(); err != nil {
+		log.Printf("Error persisting delta details: %s", err.Error())
 	}
 
 	return &InMemoryDeltaStoreDelta{
 		data: delta,
 		base: baseMetadata.Tag,
 	}, nil
+}
+
+func (imds *InMemoryDeltaStore) load() error {
+	var file *os.File
+	file, err := os.OpenFile(".data/.deltastore", os.O_RDWR|os.O_CREATE, 0766)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	return decoder.Decode(&imds.deltas)
+}
+
+func (imds *InMemoryDeltaStore) persist() error {
+	var file *os.File
+	file, err := os.OpenFile(".data/.deltastore", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0766)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	// TODO just append new deltas dont resave everything
+	decoder := json.NewEncoder(file)
+	return decoder.Encode(imds.deltas)
 }

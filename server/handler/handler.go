@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"path"
 	"strings"
@@ -101,6 +102,7 @@ func (h *Handler) getDelta(im imInfo, md blob.Metadata) (deltastore.Delta, error
 func sendNotModified(w http.ResponseWriter, r *http.Request, m blob.Metadata) error {
 	w.Header().Set("Etag", m.Tag)
 	w.WriteHeader(http.StatusNotModified)
+	log.Printf("Sending not modified %s", r.URL)
 	return nil
 }
 
@@ -117,6 +119,8 @@ func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m bl
 			return err
 		}
 		defer deltaReader.Close()
+
+		log.Printf("Sending delta %s", r.URL)
 
 		io.Copy(w, deltaReader)
 	}
@@ -135,6 +139,8 @@ func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metada
 		}
 
 		// TODO implement range support if reader supports it
+
+		log.Printf("Sending blob %s", r.URL)
 
 		io.Copy(w, reader)
 	}
