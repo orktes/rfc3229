@@ -14,15 +14,16 @@ async function applyPatch (request, cachedResponse) {
     return serverResponse.status === 200 ? serverResponse : cachedResponse;
   }
 
-  const [{ value: old }, { value: patch }] = await Promise.all([
-    cachedResponse.body.getReader().read(),
-    serverResponse.body.getReader().read()
+  const [old, patch] = await Promise.all([
+    cachedResponse.arrayBuffer().then((buf)=> new Uint8Array(buf)),
+    serverResponse.arrayBuffer().then((buf)=> new Uint8Array(buf))
   ]);
 
+  console.log(request.url);
   const newFile = BSDiff.MultiPatch(old, patch);
   const responseHeaders = new Headers(serverResponse.headers);
   responseHeaders.set('content-type', cachedResponse && cachedResponse.headers.get('content-type'));
-  responseHeaders.delete('content-length');
+  responseHeaders.set('content-length', newFile[0].length);
   return new Response(newFile[0], {
     headers: responseHeaders,
   });
@@ -44,6 +45,7 @@ async function findAndPatch (request) {
 
   const cache = await caches.open('v1');
   cache.put(request, response.clone());
+
   return response;
 }
 

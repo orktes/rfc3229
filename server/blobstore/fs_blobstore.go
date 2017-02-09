@@ -106,6 +106,7 @@ func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
 				if err != nil {
 					return err
 				}
+				defer blob.Close()
 
 				newBlob, err := fs.getFile(path.Join(fs.path, filePath), fsMeta{
 					MD5:          md5Str,
@@ -114,6 +115,7 @@ func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
 				if err != nil {
 					return err
 				}
+				defer newBlob.Close()
 
 				listener.Update(blob, newBlob)
 			}
