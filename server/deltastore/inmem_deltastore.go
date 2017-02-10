@@ -37,6 +37,9 @@ func (d *InMemoryDeltaStoreDelta) Algorithm() string {
 func (d *InMemoryDeltaStoreDelta) Base() string {
 	return d.base
 }
+func (d *InMemoryDeltaStoreDelta) Size() int64 {
+	return int64(len(d.data))
+}
 func (d *InMemoryDeltaStoreDelta) Data() (io.ReadCloser, error) {
 	return nopCloser{bytes.NewReader(d.data)}, nil
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -101,7 +102,10 @@ func (h *Handler) getDelta(im imInfo, md blob.Metadata) (deltastore.Delta, error
 
 func sendNotModified(w http.ResponseWriter, r *http.Request, m blob.Metadata) error {
 	w.Header().Set("Etag", m.Tag)
+	w.Header().Set("Content-Length", "0")
+
 	w.WriteHeader(http.StatusNotModified)
+
 	log.Printf("Sending not modified %s", r.URL)
 	return nil
 }
@@ -110,6 +114,7 @@ func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m bl
 	w.Header().Set("IM", ds.Algorithm())
 	w.Header().Set("Delta-Base", ds.Base())
 	w.Header().Set("Etag", m.Tag)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", ds.Size()))
 
 	w.WriteHeader(http.StatusIMUsed)
 
@@ -131,6 +136,7 @@ func sendDelta(w http.ResponseWriter, r *http.Request, ds deltastore.Delta, m bl
 func sendBlob(w http.ResponseWriter, r *http.Request, b blob.Blob, m blob.Metadata) error {
 	w.Header().Set("Content-Type", m.ContentType)
 	w.Header().Set("Etag", m.Tag)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", m.Size))
 
 	if r.Method != http.MethodHead {
 		reader, err := b.Data()

@@ -22,6 +22,7 @@ import (
 type fsMeta struct {
 	MD5          string
 	ModifiedTime time.Time
+	Size         int64
 }
 
 type FSBlobStoreBlob struct {
@@ -111,6 +112,7 @@ func (fs *FSBlobStore) handleFile(filePath string, f os.FileInfo) error {
 				newBlob, err := fs.getFile(path.Join(fs.path, filePath), fsMeta{
 					MD5:          md5Str,
 					ModifiedTime: f.ModTime(),
+					Size:         f.Size(),
 				})
 				if err != nil {
 					return err
@@ -137,6 +139,7 @@ func (fs *FSBlobStore) handleNewFile(path string, f os.FileInfo) (string, error)
 	return md5, fs.writeMeta(path, fsMeta{
 		MD5:          md5,
 		ModifiedTime: f.ModTime(),
+		Size:         f.Size(),
 	}, true)
 }
 
@@ -272,6 +275,7 @@ func (fs *FSBlobStore) getFile(p string, fsm fsMeta) (blob.Blob, error) {
 		Tag:         fsm.MD5,
 		ContentType: mime.TypeByExtension(filepath.Ext(p)),
 		Name:        p,
+		Size:        fsm.Size,
 	}
 
 	return &FSBlobStoreBlob{file, metadata}, nil

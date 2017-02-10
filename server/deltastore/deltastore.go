@@ -11,6 +11,7 @@ type Delta interface {
 	Algorithm() string
 	Base() string
 	Data() (io.ReadCloser, error)
+	Size() int64
 }
 
 type DeltaStore interface {
